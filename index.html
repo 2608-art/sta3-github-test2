@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Mini Tetris</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#111827;color:#f9fafb;font:15px system-ui}main{text-align:center}.game{display:flex;gap:18px;align-items:flex-start;text-align:left}canvas{background:#030712;border:2px solid #374151}aside{width:130px}h1{margin:0 0 14px;font-size:24px}b{font-size:24px}button{width:100%;padding:9px;border:0;border-radius:7px;background:#22c55e;font-weight:700;cursor:pointer}#message{color:#fca5a5;font-weight:700}@media(max-width:430px){.game{gap:10px}aside{width:110px}}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Mini Tetris</h1>
+    <div class="game">
+      <canvas id="board" width="200" height="400" aria-label="테트리스 게임판"></canvas>
+      <aside>
+        <p>점수<br><b id="score">0</b></p>
+        <p>← → 이동<br>↑ 회전<br>↓ 내리기<br>Space 즉시 낙하</p>
+        <button id="restart">다시 시작</button>
+        <p id="message"></p>
+      </aside>
+    </div>
+  </main>
+  <script>
+    const canvas=document.querySelector('#board'),ctx=canvas.getContext('2d'),scoreEl=document.querySelector('#score'),message=document.querySelector('#message');
+    const W=10,H=20,S=20,colors=['#38bdf8','#facc15','#c084fc','#fb923c','#60a5fa','#4ade80','#f87171'];
+    const shapes=[[[1,1,1,1]],[[1,1],[1,1]],[[0,1,0],[1,1,1]],[[1,0,0],[1,1,1]],[[0,0,1],[1,1,1]],[[0,1,1],[1,1,0]],[[1,1,0],[0,1,1]]];
+    let grid,piece,score,timer,over;
+
+    const hit=(m,x,y)=>m.some((row,j)=>row.some((v,i)=>v&&(x+i<0||x+i>=W||y+j>=H||(y+j>=0&&grid[y+j][x+i]))));
+    const spawn=()=>{const n=Math.floor(Math.random()*shapes.length);piece={m:shapes[n].map(r=>[...r]),x:Math.floor((W-shapes[n][0].length)/2),y:0,c:n+1};if(hit(piece.m,piece.x,piece.y))end()};
+    const rotate=m=>m[0].map((_,i)=>m.map(r=>r[i]).reverse());
+    const move=(dx,dy)=>{if(!over&&!hit(piece.m,piece.x+dx,piece.y+dy)){piece.x+=dx;piece.y+=dy;return true}return false};
+    const lock=()=>{piece.m.forEach((r,j)=>r.forEach((v,i)=>{if(v)grid[piece.y+j][piece.x+i]=piece.c}));let lines=0;for(let y=H-1;y>=0;y--)if(grid[y].every(Boolean)){grid.splice(y,1);grid.unshift(Array(W).fill(0));lines++;y++}score+=([0,100,300,500,800][lines]||lines*300);scoreEl.textContent=score;spawn()};
+    const drop=()=>{if(!move(0,1)&&!over)lock();draw()};
+    const end=()=>{over=true;clearInterval(timer);message.textContent='게임 끝!'};
+    const cell=(x,y,c)=>{ctx.fillStyle=colors[c-1];ctx.fillRect(x*S+1,y*S+1,S-2,S-2)};
+    const draw=()=>{ctx.fillStyle='#030712';ctx.fillRect(0,0,canvas.width,canvas.height);grid.forEach((r,y)=>r.forEach((v,x)=>v&&cell(x,y,v)));if(!over)piece.m.forEach((r,j)=>r.forEach((v,i)=>v&&cell(piece.x+i,piece.y+j,piece.c)))};
+    const start=()=>{clearInterval(timer);grid=Array.from({length:H},()=>Array(W).fill(0));score=0;over=false;scoreEl.textContent='0';message.textContent='';spawn();draw();timer=setInterval(drop,500)};
+
+    addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key))e.preventDefault();if(over)return;if(e.key==='ArrowLeft')move(-1,0);if(e.key==='ArrowRight')move(1,0);if(e.key==='ArrowDown')drop();if(e.key==='ArrowUp'){const m=rotate(piece.m);if(!hit(m,piece.x,piece.y))piece.m=m}if(e.key===' '){while(move(0,1));drop()}draw()});
+    document.querySelector('#restart').addEventListener('click',start);
+    start();
+  </script>
+</body>
+</html>
